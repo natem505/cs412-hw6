@@ -37,7 +37,7 @@ in vec2 vTexCoord;
 
 uniform vec3 uLightPos;
 uniform sampler2D uTexture;
-uniform int uMapping;  // 0 = bump mapping, 1 = normal mapping
+uniform int uMapping;  // 0 = bump, 1 = normal, 2 = color
 
 out vec4 fragColor;
 
@@ -68,11 +68,15 @@ void main() {
     float dhdv = (height(vTexCoord + dv) - height(vTexCoord - dv)) * 0.5;
     n = normalize(vec3(-bumpScale * dhdu, -bumpScale * dhdv, 1.0));
     baseColor = texture(uTexture, vTexCoord).rgb;
-  } else {
+  } else if (uMapping == 1) {
     // Normal mapping: the texture stores the tangent-space normal in [0, 1]
     n = normalize(texture(uTexture, vTexCoord).rgb * 2.0 - 1.0);
     baseColor = vec3(0.85, 0.65, 0.3);
   }
+    else {
+      n = vec3(0.0, 0.0, 1.0);
+      baseColor = texture(uTexture, vTexCoord).rgb;
+    }
 
   vec3 Ka = 0.2 * baseColor;
   vec3 Kd = 0.8 * baseColor;
@@ -165,6 +169,9 @@ function createMesh({ positions, normals, tangents, texCoords, indices }) {
 
 const cubeMesh = createMesh(createCube());
 const cylinderMesh = createMesh(createCylinder());
+const coneMesh = createMesh(createCone());
+const sphereMesh = createMesh(createSphere());
+const torusMesh = createMesh(createTorus());
 
 function loadTexture(url) {
   const texture = gl.createTexture();
@@ -186,10 +193,57 @@ function loadTexture(url) {
 const brickTexture = loadTexture("brick.png");
 const normalTexture = loadTexture("texture2.jpg");
 
-const BUMP_MAPPING = 0, NORMAL_MAPPING = 1;
+
+const animatedCanvas = document.createElement("canvas");
+animatedCanvas.width = 256;
+animatedCanvas.height = 256;
+
+const animatedCtx = animatedCanvas.getContext("2d");
+const animatedTexture = gl.createTexture();
+
+gl.bindTexture(gl.TEXTURE_2D, animatedTexture);
+
+gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 256, 256, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+
+
+function updateAnimatedTexture(seconds) {
+  const ctx = animatedCtx;
+  const width = animatedCanvas.width;
+  const height = animatedCanvas.height;
+
+  ctx.fillStyle = "#102047";
+  ctx.fillRect(0, 0, width, height);
+
+  const shift = (seconds * 40) % 96;
+
+  for (let i = -3; i < 8; i++) {
+    const x = i * 48 + shift;
+
+    ctx.fillStyle = i % 2 === 0 ? "#22d3ee" : "#c084fc";
+    ctx.fillRect(x, 0, 25, height);
+  }
+
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, animatedTexture);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+
+  gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, animatedCanvas);
+}
+
+
+
+const BUMP_MAPPING = 0, NORMAL_MAPPING = 1, COLOR_MAPPING = 2;
 const objects = [
-  { mesh: cubeMesh, texture: brickTexture, mapping: BUMP_MAPPING, offset: [-1.8, 0, 0] },
-  { mesh: cylinderMesh, texture: normalTexture, mapping: NORMAL_MAPPING, offset: [1.8, 0, 0] }
+  { mesh: cubeMesh, texture: brickTexture, mapping: BUMP_MAPPING, offset: [-2.6, 1.35, 0] },
+  { mesh: cylinderMesh, texture: normalTexture, mapping: NORMAL_MAPPING, offset: [0, 1.35, 0] },
+  { mesh: coneMesh, texture: brickTexture, mapping: BUMP_MAPPING, offset: [2.6, 1.35, 0] },
+  { mesh: sphereMesh, texture: animatedTexture, mapping: COLOR_MAPPING, offset: [-1.4, -1.35, 0] },
+  { mesh: torusMesh, texture: normalTexture, mapping: NORMAL_MAPPING, offset: [1.4, -1.35, 0] }
 ];
 
 gl.enable(gl.DEPTH_TEST);
@@ -250,6 +304,7 @@ function render(time) {
   const axisRotation = ROTATE[axisSelect.value](sliderAngle * Math.PI / 180 + spinAngle);
   const rotation = multiply(multiply(rotateY(dragRotY), rotateX(dragRotX)), axisRotation);
 
+  updateAnimatedTexture(t);
   gl.activeTexture(gl.TEXTURE0);
   for (const { mesh, texture, mapping, offset } of objects) {
     gl.uniformMatrix4fv(uModelView, false, multiply(view, multiply(translate(...offset), rotation)));

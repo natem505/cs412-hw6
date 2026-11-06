@@ -77,3 +77,153 @@ function createCylinder(segments = 64, uRepeat = 3) {
     indices: new Uint16Array(indices)
   };
 }
+
+function createCone(segments = 48, rings = 16) {
+  const positions = [], normals = [], tangents = [];
+  const texCoords = [], indices = [];
+
+  for (let i = 0; i <= segments; i++) {
+    const u = i / segments;
+    const theta = 2 * Math.PI * u;
+    const s = Math.sin(theta), c = Math.cos(theta);
+
+    for (let j = 0; j <= rings; j++) {
+      const v = j / rings;
+      const radius = 1 - v;
+      const y = -1 + 2 * v;
+
+      positions.push(radius * s, y, radius * c);
+
+      const length = Math.sqrt(5);
+      normals.push(2 * s / length, 1 / length, 2 * c / length);
+
+      tangents.push(c, 0, -s);
+      texCoords.push(u * 2, v);
+    }
+  }
+
+  for (let i = 0; i < segments; i++) {
+    for (let j = 0; j < rings; j++) {
+      const a = i * (rings + 1) + j;
+      const b = a + rings + 1;
+      indices.push(a, b, b + 1, a, b + 1, a + 1);
+    }
+  }
+
+  const center = positions.length / 3;
+  positions.push(0, -1, 0);
+  normals.push(0, -1, 0);
+  tangents.push(1, 0, 0);
+  texCoords.push(0.5, 0.5);
+
+  for (let i = 0; i <= segments; i++) {
+    const theta = 2 * Math.PI * i / segments;
+    const s = Math.sin(theta), c = Math.cos(theta);
+
+    positions.push(s, -1, c);
+    normals.push(0, -1, 0);
+    tangents.push(1, 0, 0);
+    texCoords.push(0.5 + 0.5 * s, 0.5 + 0.5 * c);
+  }
+
+  for (let i = 0; i < segments; i++) {
+    indices.push(center, center + i + 2, center + i + 1);
+  }
+
+  return {
+    positions: new Float32Array(positions),
+    normals: new Float32Array(normals),
+    tangents: new Float32Array(tangents),
+    texCoords: new Float32Array(texCoords),
+    indices: new Uint16Array(indices)
+  };
+}
+
+
+function createSphere(segments = 48, rings = 24) {
+  const positions = [], normals = [], tangents = [];
+  const texCoords = [], indices = [];
+
+  for (let i = 0; i <= segments; i++) {
+    const u = i / segments;
+    const theta = 2 * Math.PI * u;
+    const s = Math.sin(theta), c = Math.cos(theta);
+
+    for (let j = 0; j <= rings; j++) {
+      const v = j / rings;
+      const latitude = Math.PI * (v - 0.5);
+
+      const x = Math.cos(latitude) * s;
+      const y = Math.sin(latitude);
+      const z = Math.cos(latitude) * c;
+
+      positions.push(x, y, z);
+      normals.push(x, y, z);
+      tangents.push(c, 0, -s);
+      texCoords.push(u * 2, v);
+    }
+  }
+
+  for (let i = 0; i < segments; i++) {
+    for (let j = 0; j < rings; j++) {
+      const a = i * (rings + 1) + j;
+      const b = a + rings + 1;
+      indices.push(a, b, b + 1, a, b + 1, a + 1);
+    }
+  }
+
+  return {
+    positions: new Float32Array(positions),
+    normals: new Float32Array(normals),
+    tangents: new Float32Array(tangents),
+    texCoords: new Float32Array(texCoords),
+    indices: new Uint16Array(indices)
+  };
+}
+
+
+function createTorus(segments = 48, tubeSegments = 24) {
+  const positions = [], normals = [], tangents = [];
+  const texCoords = [], indices = [];
+
+  const R = 0.7;
+  const r = 0.3; 
+
+  for (let i = 0; i <= segments; i++) {
+    const u = i / segments;
+    const theta = 2 * Math.PI * u;
+    const s = Math.sin(theta), c = Math.cos(theta);
+
+    for (let j = 0; j <= tubeSegments; j++) {
+      const v = j / tubeSegments;
+      const phi = 2 * Math.PI * v;
+
+      const cp = Math.cos(phi), sp = Math.sin(phi);
+      const radius = R + r * cp;
+
+      positions.push(radius * c, radius * s, r * sp);
+
+      normals.push(cp * c, cp * s, sp);
+      tangents.push(-s, c, 0);
+      texCoords.push(u * 2, v * 2);
+    }
+  }
+
+  for (let i = 0; i < segments; i++) {
+    for (let j = 0; j < tubeSegments; j++) {
+      const a = i * (tubeSegments + 1) + j;
+      const b = a + tubeSegments + 1;
+      indices.push(a, b, b + 1, a, b + 1, a + 1);
+    }
+  }
+
+  return {
+    positions: new Float32Array(positions),
+    normals: new Float32Array(normals),
+    tangents: new Float32Array(tangents),
+    texCoords: new Float32Array(texCoords),
+    indices: new Uint16Array(indices)
+  };
+}
+
+
